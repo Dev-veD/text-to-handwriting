@@ -4,7 +4,7 @@ import {
   removePaperStyles,
   addFontFromFile,
   createPDF,
-  smoothlyScrollTo
+  smoothlyScrollTo,
 } from './helpers.mjs';
 
 import { setInkColor, toggleDrawCanvas } from './draw.mjs';
@@ -13,7 +13,7 @@ import { warpVertically, warp_canvas } from './curvature.mjs';
 
 const textareaEl = document.querySelector('.page > .textarea');
 const page = document.querySelector('.page');
-const warpedImage = document.getElementById("warped-image");
+const warped_image = document.getElementById("warped_image");
 
 var generatedImages = [];
 
@@ -24,7 +24,32 @@ function setDownloadSource(imageSource) {
     a.classList.remove('disabled');
   });
 }
+function addImageToPaper(vs) {
+console.log(vs[0]);
+var h = document.getElementById("height").value
+var w = document.getElementById("height").value
+if(h==""||h>600){
+h=20;
+}
+if(w==""||w>480){
+w = 20;
+}
+console.log(w)
+console.log(h)
+const reader = new FileReader();
+reader.onload = function(){
+  var dataURL = reader.result;
+  var sorc = dataURL;
+  document.querySelector('#note').innerHTML = /* html */`
+    <img style="width: ${w}%;height: ${h}%;filter: grayscale(100%); display: block;
+    margin-left: auto;
+    margin-right: auto;" src="${sorc}" /><br>
+  ` + document.querySelector('#note').innerHTML;
 
+};
+reader.readAsDataURL(vs[0]);
+
+}
 function setOutputImage(imageEl) {
   const output = document.querySelector('.output');
   output.innerHTML = '';
@@ -33,43 +58,6 @@ function setOutputImage(imageEl) {
   generatedImages.push(imageEl.src);
   setDownloadSource(imageEl.src);
   document.querySelector('#image-count').innerHTML = generatedImages.length;
-}
-
-function setPDFPreviews() {
-  document.querySelector('.preview-holder').innerHTML = generatedImages.map((imageb64, index) => {
-    return `
-    <div class="preview-image image-${index}">
-      <button data-removeindex="${index}" class="close-image">&times;</button>
-      <img src="${imageb64}">
-    </div>
-    `
-  }).join('');
-
-  document.querySelector('#image-count').innerHTML = generatedImages.length;
-
-
-  document.querySelectorAll('.preview-holder .close-image')
-    .forEach(closeButton => 
-      closeButton.addEventListener('click', e => {
-        generatedImages.splice(Number(closeButton.dataset.removeindex), 1);
-        setPDFPreviews();
-      })
-    )
-}
-
-function togglePDFPreview() {
-  const pdfPreviewContainer = document.querySelector('.pdf-preview-container');
-  if(pdfPreviewContainer.classList.contains('show')) {
-    // draw canvas is currently shown
-    document.querySelector('main').style.display = 'block';
-    document.querySelector('footer').style.display = 'block';
-  } else {
-    document.querySelector('main').style.display = 'none';
-    document.querySelector('footer').style.display = 'none';
-    setPDFPreviews();
-  }
-
-  pdfPreviewContainer.classList.toggle('show');
 }
 
 /**
@@ -95,8 +83,8 @@ async function generateImage() {
     if (document.querySelector('#paper-curve-toggle').checked){
       img.onload = function(){
         warpVertically(img, 0);
-        warpedImage.src = warp_canvas.toDataURL("image/png");
-        setOutputImage(warpedImage);
+        warped_image.src = warp_canvas.toDataURL("image/png");
+        setOutputImage(warped_image);
       }
       img.src = canvas.toDataURL("image/jpeg");
     } else {
@@ -131,8 +119,6 @@ const setTextareaStyle = (attrib, v) => {
   textareaEl.style[attrib] = v;
 };
 
-let popup = '';
-
 const EVENT_MAP = {
   '#handwriting-font': {
     on: 'change',
@@ -158,6 +144,10 @@ const EVENT_MAP = {
     on: 'change',
     action: (e) => addFontFromFile(e.target.files[0]),
   },
+  '#image-Add': {
+    on: 'change',
+    action: (e) => addImageToPaper(e.target.files),
+  },
   '#ink-color': {
     on: 'change',
     action: (e) => {
@@ -175,31 +165,11 @@ const EVENT_MAP = {
   },
   '#draw-diagram-button': {
     on: 'click',
-    action: () => {
-      toggleDrawCanvas();
-      popup = 'draw';
-    },
+    action: toggleDrawCanvas,
   },
   '.draw-container .close-button': {
     on: 'click',
-    action: () => {
-      toggleDrawCanvas();
-      popup = '';
-    },
-  },
-  '#pdf-preview-button': {
-    on: 'click',
-    action: () => {
-      togglePDFPreview();
-      popup = 'pdfpreview'
-    },
-  },
-  '.pdf-preview-container .close-button': {
-    on: 'click',
-    action: () => {
-      togglePDFPreview();
-      popup = '';
-    },
+    action: toggleDrawCanvas,
   },
   '#generate-image-form': {
     on: 'submit',
@@ -208,6 +178,7 @@ const EVENT_MAP = {
       generateImage();
     },
   },
+ 
   '#generate-pdf': {
     on: 'click',
     action: (e) => {
@@ -225,16 +196,6 @@ for (const event in EVENT_MAP) {
     .querySelector(event)
     .addEventListener(EVENT_MAP[event].on, EVENT_MAP[event].action);
 }
-
-window.addEventListener('keyup', e => {
-  if (e.code === 'Escape') {
-    if (popup === 'pdfpreview') {
-      togglePDFPreview();
-    } else if (popup === 'draw') {
-      toggleDrawCanvas();
-    }
-  }
-})
 
 
 // Set paper lines to true on init
@@ -277,3 +238,4 @@ fetch('https://api.github.com/repos/saurabhdaware/text-to-handwriting/contributo
 
 // Too lazy to change year in footer every year soo...
 document.querySelector('#year').innerHTML = new Date().getFullYear();
+document.querySelector('#add-image-button').addEventListener('click', addImageToPaper);
